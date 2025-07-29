@@ -21,5 +21,3 @@ func main() {
 	mean := (x + y) / 2.0
 	fmt.Printf("The mean of %v and %v is: %v\n", x, y, mean)
 }
-
-// This code prints a welcome message to the console in Go programming language.
