@@ -235,3 +235,62 @@ func main() {
  fmt.Printf("Count of even ended numbers form %d to %d: %d\n", START, END-1, count)
 }
 ```
+
+### Slices
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+ // Declare and initialize an array of strings
+ loons := []string{"loon1", "loon2", "loon3"}
+ fmt.Printf("loons: %v, (type %T)\n", loons, loons)
+ fmt.Println("Array length:", len(loons))
+ fmt.Println("Array capacity:", cap(loons))
+ fmt.Println("First element:", loons[0])
+
+ // slices
+ fmt.Println("Slicing the array:", loons[1:])
+
+ for i, v := range loons {
+  fmt.Printf("Index: %d, Value: %s\n", i, v)
+ }
+ for _, v := range loons {
+  fmt.Printf("Value: %s\n", v)
+ }
+
+ // Append to the slice
+ loons = append(loons, "loon4")
+ fmt.Printf("After appending: %v\n", loons)
+}
+```
+
+### Challenge: max value
+
+```go
+package main
+
+func main() {
+ // Declare and initialize an array of integers
+ numbers := []int{10, 200, 30, 400, 50}
+ maxValue := max(numbers)
+ println("The maximum value in the slice is:", maxValue)
+}
+
+func max(nums []int) int {
+ if len(nums) < 1 {
+  return 0
+ }
+
+ maxVal := nums[0]
+ for _, num := range nums {
+  if num > maxVal {
+   maxVal = num
+  }
+ }
+
+ return maxVal
+}
+```
