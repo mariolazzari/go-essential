@@ -478,5 +478,82 @@ func sqrt(n float64) (float64, error) {
 ### Defer
 
 ```go
+package main
+
+import "fmt"
+
+func main() {
+ worker()
+}
+
+func worker() {
+ r1, err := acquire("resource1")
+ if err != nil {
+  fmt.Println("Error acquiring resource1:", err)
+  return
+ }
+ defer release(r1)
+
+ r2, err := acquire("resource2")
+ if err != nil {
+  fmt.Println("Error acquiring resource2:", err)
+  return
+ }
+ defer release(r2)
+
+ fmt.Println("Working with", r1)
+ fmt.Println("Working with", r2)
+ fmt.Println("Done working")
+}
+
+func acquire(name string) (string, error) {
+ return name, nil
+}
+
+func release(name string) {
+ fmt.Println("Releasing", name)
+}
+```
+
+### Challenge
+
+```go
+package main
+
+import (
+ "fmt"
+ "net/http"
+)
+
+func main() {
+ ctype, err := contentType("https://mariolazzari.it")
+ if err != nil {
+  fmt.Println("Error:", err)
+ } else {
+  fmt.Println("Content-Type:", ctype)
+ }
+}
+
+func contentType(url string) (string, error) {
+ res, err := http.Get(url)
+ if err != nil {
+  return "", err
+ }
+ defer res.Body.Close()
+
+ ctype := res.Header.Get("Content-Type")
+ if ctype == "" {
+  return "", fmt.Errorf("Content-Type header not found")
+ }
+
+ return ctype, nil
+}
+```
+
+## Object oriented
+
+### Structs
+
+```go
 
 ```
