@@ -645,3 +645,256 @@ func main() {
  fmt.Println("Updated Balance:", b.Balance)
 }
 ```
+
+### New function
+
+```go
+package main
+
+import (
+ "fmt"
+ "time"
+)
+
+type Budget struct {
+ CampaignID string
+ Balance    float64
+ Expires    time.Time
+}
+
+func NewBudget(campaignID string, balance float64, expires time.Time) (*Budget, error) {
+
+ if campaignID == "" {
+  return nil, fmt.Errorf("campaignID cannot be empty")
+ }
+
+ if balance < 0 {
+  return nil, fmt.Errorf("balance cannot be negative")
+ }
+
+ if expires.Before(time.Now()) {
+  return nil, fmt.Errorf("expires time must be in the future")
+ }
+
+ b := Budget{
+  CampaignID: campaignID,
+  Balance:    balance,
+  Expires:    expires,
+ }
+
+ return &b, nil
+}
+
+func main() {
+ expires := time.Now().Add(7 * 24 * time.Hour)
+ b1, err := NewBudget("12345", 1000.00, expires)
+ if err != nil {
+  fmt.Println("Error creating budget:", err)
+  return
+ }
+ fmt.Println("Budget created with CampaignID:", b1.CampaignID)
+ fmt.Println("Initial Balance:", b1.Balance)
+ fmt.Println("Expires at:", b1.Expires)
+
+ b2, err := NewBudget("", 500.00, expires)
+ if err != nil {
+  fmt.Println("Error creating budget:", err)
+ } else {
+  fmt.Printf("Budget created with CampaignID: %s\n", b2.CampaignID)
+ }
+}
+```
+
+### Challenge structs
+
+```go
+package main
+
+import "fmt"
+
+type Square struct {
+ X      int
+ Y      int
+ Length int
+}
+
+func NewSquare(x, y, length int) (*Square, error) {
+ if length <= 0 {
+  return nil, fmt.Errorf("Side length must be positive")
+ }
+
+ s := Square{X: x, Y: y, Length: length}
+
+ return &s, nil
+}
+
+func (s Square) Area() int {
+ return s.Length * s.Length
+}
+
+func (s Square) Perimeter() int {
+ return 4 * s.Length
+}
+
+func (s *Square) Move(x, y int) {
+ s.X += x
+ s.Y += y
+}
+
+func main() {
+
+ s, err := NewSquare(0, 0, 5)
+ if err != nil {
+  fmt.Println("Error:", err)
+  return
+ }
+
+ println("Area:", s.Area())
+ println("Perimeter:", s.Perimeter())
+ s.Move(2, 3)
+ println("Moved to:", s.X, s.Y)
+
+ s, err = NewSquare(0, 0, -5)
+ if err != nil {
+  fmt.Println("Error:", err)
+  return
+ }
+ println("Area:", s.Area())
+ println("Perimeter:", s.Perimeter())
+}
+```
+
+### Interfaces
+
+```go
+package main
+
+import (
+ "fmt"
+ "math"
+)
+
+type Square struct {
+ Length float64
+}
+
+func (s Square) Area() float64 {
+ return s.Length * s.Length
+}
+
+type Circle struct {
+ Radius float64
+}
+
+func (c Circle) Area() float64 {
+ return math.Pi * math.Pow(c.Radius, 2)
+}
+
+type Shape interface {
+ Area() float64
+}
+
+func sumAreas(shapes []Shape) float64 {
+ total := 0.0
+ for _, shape := range shapes {
+  total += shape.Area()
+ }
+ return total
+}
+
+func main() {
+ s1 := Square{Length: 5}
+ c1 := Circle{Radius: 3}
+ s2 := Square{Length: 6}
+ c2 := Circle{Radius: 4}
+
+ shapes := []Shape{s1, c1, s2, c2}
+
+ totalArea := sumAreas(shapes)
+ fmt.Printf("Total Area: %f\n", totalArea)
+}
+```
+
+### Interfeces challenge
+
+```go
+package main
+
+import (
+ "fmt"
+ "io"
+ "os"
+)
+
+type Capper struct {
+ w io.Writer
+}
+
+func (c *Capper) Write(p []byte) (n int, err error) {
+ for i, b := range p {
+  if b >= 'a' && b <= 'z' {
+   p[i] -= 32 // Convert to uppercase
+  }
+ }
+ return c.w.Write(p)
+}
+
+func main() {
+ c := &Capper{os.Stdout}
+ fmt.Fprintf(c, "Hello, World")
+}
+```
+
+### Generics
+
+```go
+package main
+
+import "fmt"
+
+type Ordered interface {
+ int | float64 | string
+}
+
+func min[T Ordered](values []T) (T, error) {
+ if len(values) == 0 {
+  var zero T
+  return zero, fmt.Errorf("cannot find minimum of an empty slice")
+ }
+
+ minValue := values[0]
+ for _, value := range values[1:] {
+  if value < minValue {
+   minValue = value
+  }
+ }
+
+ return minValue, nil
+}
+
+func main() {
+ nums := []int{3, 1, 4, 1, 5, 9, 2, 6, 5}
+ minNum, err := min(nums)
+ if err != nil {
+  fmt.Println("Error:", err)
+ } else {
+  fmt.Println("Minimum number:", minNum)
+ }
+
+ strs := []string{"apple", "banana", "cherry"}
+ minStr, err := min(strs)
+ if err != nil {
+  fmt.Println("Error:", err)
+ } else {
+  fmt.Println("Minimum string:", minStr)
+ }
+}
+```
+
+## Errors
+
+### pkg/errors
+
+```go
+
+```
