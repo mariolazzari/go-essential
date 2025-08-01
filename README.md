@@ -896,5 +896,132 @@ func main() {
 ### pkg/errors
 
 ```go
+// pkg/errors example
+package main
+
+import (
+ "fmt"
+ "log"
+ "os"
+
+ "github.com/pkg/errors"
+)
+
+// Config holds configuration
+type Config struct {
+ // configuration fields go here (redacted)
+}
+
+func readConfig(path string) (*Config, error) {
+ file, err := os.Open(path)
+ if err != nil {
+  return nil, errors.Wrap(err, "can't open configuration file")
+ }
+ defer file.Close()
+
+ cfg := &Config{}
+ // Parse file here (redacted)
+ return cfg, nil
+
+}
+
+func setupLogging() {
+ out, err := os.OpenFile("app.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+ if err != nil {
+  return
+ }
+ log.SetOutput(out)
+}
+
+func main() {
+ setupLogging()
+ cfg, err := readConfig("/path/to/config.toml")
+ if err != nil {
+  fmt.Fprintf(os.Stderr, "error: %s\n", err)
+  log.Printf("error: %+v", err)
+  os.Exit(1)
+ }
+
+ // Normal operation (redacted)
+ fmt.Println(cfg)
+}
+```
+
+### Panic and recover
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+ vals := []int{1, 2, 3}
+ v, err := safeValue(vals, 5)
+ if err != nil {
+  fmt.Println("Error:", err)
+ } else {
+  fmt.Println("Value:", v)
+ }
+ fmt.Println("Program continues after handling the error.")
+}
+
+func safeValue(vals []int, index int) (n int, err error) {
+ defer func() {
+  if e := recover(); e != nil {
+   err = fmt.Errorf("index out of range: %v", e)
+  }
+ }()
+
+ return vals[index], err
+}
+```
+
+### Challenge: process kill
+
+```go
+package main
+
+import (
+ "fmt"
+ "os"
+)
+
+func main() {
+ err := killServer("server.pid")
+ if err != nil {
+  fmt.Println("Error killing server:", err)
+ } else {
+  fmt.Println("Server killed successfully")
+ }
+ fmt.Println("Exiting main function")
+}
+
+func killServer(pidFile string) error {
+ file, err := os.Open(pidFile)
+ if err != nil {
+  return fmt.Errorf("failed to read PID file: %w", err)
+ }
+ defer file.Close()
+
+ var pid int
+ if _, err := fmt.Fscanf(file, "%d", &pid); err != nil {
+  return fmt.Errorf("failed to parse PID from file: %w", err)
+ }
+
+ fmt.Println("Killing server with PID:", pid)
+
+ if err := os.Remove(pidFile); err != nil {
+  return fmt.Errorf("failed to remove PID file: %w", err)
+ }
+
+ return nil
+}
+```
+
+## Concurrency
+
+### Goroutines
+
+```go
 
 ```
