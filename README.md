@@ -1224,3 +1224,129 @@ func main() {
  }
 }
 ```
+
+### Context
+
+```go
+package main
+
+import (
+ "context"
+ "fmt"
+ "time"
+)
+
+type Bid struct {
+ AdURL string
+ Price float64
+}
+
+func main() {
+ ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+ defer cancel()
+ url := "url"
+ bid := findBid(ctx, url)
+ fmt.Println(bid)
+}
+
+func bestBid(url string) Bid {
+ time.Sleep(20 * time.Millisecond)
+
+ return Bid{
+  AdURL: url,
+  Price: .05,
+ }
+}
+
+var defaultBid = Bid{
+ AdURL: "default",
+ Price: .02,
+}
+
+func findBid(ctx context.Context, url string) Bid {
+ ch := make(chan Bid, 1)
+ go func() {
+  ch <- bestBid(url)
+ }()
+
+ select {
+ case bid := <-ch:
+  return bid
+ case <-ctx.Done():
+  return defaultBid
+ }
+}
+```
+
+### Challenge: download size
+
+```go
+package main
+
+import (
+ "fmt"
+ "log"
+ "net/http"
+ "strconv"
+ "time"
+)
+
+var (
+ urlTemplate = "https://s3.amazonaws.com/nyc-tlc/trip+data/%s_tripdata_2020-%02d.csv"
+ colors      = []string{"green", "yellow"}
+)
+
+func downloadSize(url string) (int, error) {
+ req, err := http.NewRequest(http.MethodHead, url, nil)
+ if err != nil {
+  return 0, err
+ }
+
+ resp, err := http.DefaultClient.Do(req)
+ if err != nil {
+  return 0, err
+ }
+
+ if resp.StatusCode != http.StatusOK {
+  return 0, fmt.Errorf(resp.Status)
+ }
+
+ return strconv.Atoi(resp.Header.Get("Content-Length"))
+}
+
+type result struct {
+ url  string
+ size int
+ err  error
+}
+
+func sizeWorker(url string, ch chan result) {
+ fmt.Println(url)
+ res := result{url: url}
+ res.size, res.err = downloadSize(url)
+ ch <- res
+}
+
+func main() {
+ start := time.Now()
+ size := 0
+ ch := make(chan result)
+ for month := 1; month <= 12; month++ {
+  for _, color := range colors {
+   url := fmt.Sprintf(urlTemplate, color, month)
+   go sizeWorker(url, ch)
+  }
+ }
+
+ for i := 0; i < len(colors)*12; i++ {
+  r := <-ch
+  if r.err != nil {
+   log.Fatal(r.err)
+  }
+  size += r.size
+ }
+
+ duration := time.Since(start)
+ fmt.Println(size, duration)
+}
+```
