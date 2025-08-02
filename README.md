@@ -1638,3 +1638,212 @@ func main() {
  io.Copy(os.Stdout, res.Body)
 }
 ```
+
+### Timeouts and size limits
+
+```go
+package main
+
+import (
+ "context"
+ "io"
+ "log"
+ "net/http"
+ "os"
+)
+
+func main() {
+ ctx, cancel := context.WithTimeout(context.Background(), 300)
+ defer cancel()
+
+ req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://httpbin.org/ip", nil)
+ if err != nil {
+  log.Fatal(err)
+ }
+
+ res, err := http.DefaultClient.Do(req)
+ if err != nil {
+  log.Fatal(err)
+ }
+ defer res.Body.Close()
+
+ const mb = 1 << 20
+ r := io.LimitReader(res.Body, mb)
+ io.Copy(os.Stdout, r)
+}
+```
+
+### Challenge: github API
+
+```go
+// Calling GitHub API
+package main
+
+import (
+ "encoding/json"
+ "fmt"
+ "log"
+ "net/http"
+ "net/url"
+)
+
+// User is a github user information
+type User struct {
+ Login    string
+ Name     string
+ NumRepos int `json:"public_repos"`
+}
+
+// userInfo return information on github user
+func userInfo(login string) (*User, error) {
+ // HTTP call
+ u := fmt.Sprintf("https://api.github.com/users/%s", url.PathEscape(login))
+ resp, err := http.Get(u)
+ if err != nil {
+  return nil, err
+ }
+ defer resp.Body.Close()
+
+ if resp.StatusCode != http.StatusOK {
+  return nil, fmt.Errorf(resp.Status)
+ }
+
+ // Decode JSON
+ user := User{Login: login}
+ dec := json.NewDecoder(resp.Body)
+ if err := dec.Decode(&user); err != nil {
+  return nil, err
+ }
+
+ return &user, nil
+}
+
+func main() {
+ user, err := userInfo("mariolazzari")
+ if err != nil {
+  log.Fatalf("error: %s", err)
+ }
+
+ fmt.Printf("%#v\n", user)
+}
+```
+
+### HTTP server
+
+```go
+// HTTP server example
+package main
+
+import (
+ "encoding/json"
+ "fmt"
+ "log"
+ "net/http"
+ "strings"
+)
+
+// healthHandler returns a server health
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+ fmt.Fprintln(w, "OK")
+}
+
+// MathRequest is a request of math operation
+type MathRequest struct {
+ Op    string  `json:"op"`
+ Left  float64 `json:"left"`
+ Right float64 `json:"right"`
+}
+
+// MathResponse is a response to MathRequest
+type MathResponse struct {
+ Error  string  `json:"error"`
+ Result float64 `json:"result"`
+}
+
+// mathHandler returns result of calculation
+func mathHandler(w http.ResponseWriter, r *http.Request) {
+ // Step 1: Decode & Validate
+ defer r.Body.Close()
+ dec := json.NewDecoder(r.Body)
+ req := &MathRequest{}
+
+ if err := dec.Decode(req); err != nil {
+  log.Printf("error: bad JSON: %s", err)
+  http.Error(w, "bad json", http.StatusBadRequest)
+  return
+ }
+
+ if !strings.Contains("+-*/", req.Op) {
+  log.Printf("error: bad operator: %q", req.Op)
+  http.Error(w, "unkown operator", http.StatusBadRequest)
+  return
+ }
+
+ // Step 2: work
+ resp := &MathResponse{}
+ switch req.Op {
+ case "+":
+  resp.Result = req.Left + req.Right
+ case "-":
+  resp.Result = req.Left - req.Right
+ case "*":
+  resp.Result = req.Left * req.Right
+ case "/":
+  if req.Right == 0.0 {
+   resp.Error = "division by 0"
+  } else {
+   resp.Result = req.Left / req.Right
+  }
+ default:
+  resp.Error = fmt.Sprintf("unknown operation: %s", req.Op)
+ }
+
+ // Step 3: Encode result
+ w.Header().Set("Content-Type", "application/json")
+ if resp.Error != "" {
+  w.WriteHeader(http.StatusBadRequest)
+ }
+
+ enc := json.NewEncoder(w)
+ if err := enc.Encode(resp); err != nil {
+  // Can't return error to client here
+  log.Printf("can't encode %v - %s", resp, err)
+ }
+}
+
+func main() {
+ http.HandleFunc("/health", healthHandler)
+ http.HandleFunc("/math", mathHandler)
+
+ addr := ":8080"
+ log.Printf("server ready on %s", addr)
+ if err := http.ListenAndServe(addr, nil); err != nil {
+  log.Fatal(err)
+ }
+}
+```
+
+### Challenge: key/value database
+
+```go
+package main
+
+import "sync"
+
+type DB struct {
+ m sync.Map
+}
+
+func (db *DB) Get(key string) []byte {
+ val, ok := db.m.Load(key)
+ if !ok {
+  return nil
+ }
+
+ return val.([]byte)
+}
+
+func (db *DB) Set(key string, value []byte) {
+ db.m.Store(key, value)
+}
+```
